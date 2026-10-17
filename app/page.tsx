@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || "https://backendupbtest.onrender.com").replace(/\/$/, "");
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "https://backendupbtest-prueba.onrender.com").replace(/\/$/, "");
 
 type Producto = { id: number; nombre: string; precio: number | string; stock: number };
 
