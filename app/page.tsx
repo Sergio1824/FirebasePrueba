@@ -1,50 +1,68 @@
+"use client";
+
+import { FormEvent, useCallback, useEffect, useState } from "react";
+
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "https://backendupbtest.onrender.com").replace(/\/$/, "");
+
+type Producto = { id: number; nombre: string; precio: number | string; stock: number };
+
 export default function Home() {
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [nombre, setNombre] = useState("");
+  const [precio, setPrecio] = useState("");
+  const [stock, setStock] = useState("");
+
+  const cargarProductos = useCallback(async () => {
+    setError("");
+    try {
+      const respuesta = await fetch(`${API_URL}/api/productos`);
+      if (!respuesta.ok) throw new Error(`La API respondió ${respuesta.status}.`);
+      setProductos(await respuesta.json());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo conectar con el backend.");
+    } finally {
+      setCargando(false);
+    }
+  }, []);
+
+  useEffect(() => { void cargarProductos(); }, [cargarProductos]);
+
+  async function crearProducto(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setGuardando(true);
+    setError("");
+    try {
+      const respuesta = await fetch(`${API_URL}/api/productos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre: nombre.trim(), precio: Number(precio), stock: Number(stock) }),
+      });
+      const datos = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok) throw new Error(datos.error || `La API respondió ${respuesta.status}.`);
+      setNombre(""); setPrecio(""); setStock("");
+      await cargarProductos();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo crear el producto.");
+    } finally {
+      setGuardando(false);
+    }
+  }
+
   return (
-    <main className="landing">
-      <nav className="landing-nav" aria-label="Navegación principal">
-        <a className="brand" href="#inicio" aria-label="Firebase Prueba, inicio">
-          <span className="brand-mark" aria-hidden="true">f</span>
-          <span>Firebase Prueba</span>
-        </a>
-        <a className="nav-link" href="#sobre">Sobre el proyecto</a>
-      </nav>
-
-      <section className="hero" id="inicio">
-        <div className="hero-content">
-          <p className="eyebrow"><span /> Un proyecto listo para empezar</p>
-          <h1>Ideas simples.<br /><span>Grandes posibilidades.</span></h1>
-          <p className="hero-copy">
-            Esta página ya está en línea. Un espacio sencillo para probar,
-            construir y dar vida a lo que viene.
-          </p>
-          <a className="primary-button" href="#sobre">
-            Conoce el proyecto <span aria-hidden="true">↗</span>
-          </a>
+    <main className="app-shell">
+      <header className="topbar"><a className="brand" href="#inicio"><span className="brand-icon">P</span><span>Productos UPB</span></a><span className="connection"><i /> API conectada</span></header>
+      <section className="intro" id="inicio"><p className="eyebrow">BACKEND + FIREBASE</p><h1>Inventario de productos</h1><p>Los datos se consultan y guardan en la API de productos desplegada en Render.</p></section>
+      <section className="content-grid">
+        <div className="panel inventory"><div className="panel-heading"><div><p className="eyebrow">CATÁLOGO</p><h2>Productos</h2></div><button className="secondary-button" onClick={() => void cargarProductos()} disabled={cargando}>Actualizar</button></div>
+          {error && <p className="notice error" role="alert">{error} Comprueba que el backend esté activo.</p>}
+          {cargando ? <p className="empty">Cargando productos…</p> : productos.length === 0 ? <p className="empty">Aún no hay productos. Puedes crear el primero.</p> : <div className="table-wrap"><table><thead><tr><th>Producto</th><th>Precio</th><th>Stock</th></tr></thead><tbody>{productos.map((p) => <tr key={p.id}><td><strong>{p.nombre}</strong><small>ID {p.id}</small></td><td>${Number(p.precio).toFixed(2)}</td><td><span className="stock">{p.stock}</span></td></tr>)}</tbody></table></div>}
         </div>
-
-        <div className="hero-art" aria-hidden="true">
-          <div className="orbit orbit-one" />
-          <div className="orbit orbit-two" />
-          <div className="glow" />
-          <div className="firebase-symbol">
-            <span className="flame flame-left" />
-            <span className="flame flame-right" />
-            <span className="flame flame-base" />
-          </div>
-          <div className="art-label"><span /> Todo listo para despegar</div>
-        </div>
+        <form className="panel form-panel" onSubmit={crearProducto}><p className="eyebrow">NUEVO REGISTRO</p><h2>Agregar producto</h2><label>Nombre<input required maxLength={100} value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej. Cuaderno" /></label><div className="form-row"><label>Precio<input required type="number" min="0" step="0.01" value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder="0.00" /></label><label>Stock<input required type="number" min="0" step="1" value={stock} onChange={(e) => setStock(e.target.value)} placeholder="0" /></label></div><button className="primary-button" disabled={guardando}>{guardando ? "Guardando…" : "Guardar producto"}</button><p className="form-hint">La operación se realiza con POST /api/productos.</p></form>
       </section>
-
-      <section className="about" id="sobre">
-        <p>UN BUEN LUGAR PARA COMENZAR</p>
-        <h2>El siguiente paso empieza aquí.</h2>
-        <span>Gracias por visitarnos.</span>
-      </section>
-
-      <footer className="landing-footer">
-        <span>Firebase Prueba</span>
-        <span>Hecho para lo que sigue <span aria-hidden="true">✳</span></span>
-      </footer>
+      <footer>Proyecto académico · Frontend Firebase Hosting · Backend Render</footer>
     </main>
   );
 }
