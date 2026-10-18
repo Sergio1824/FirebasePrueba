@@ -1,16 +1,15 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || "https://backendupbtest-prueba.onrender.com").replace(/\/$/, "");
-
-type Producto = { id: number; nombre: string; precio: number | string; stock: number };
+import StoreHeader from "@/app/components/store-header";
+import { CartLine, formatMoney, Producto, readCart, requestApi, saveCart } from "@/app/lib/api";
 
 export default function Home() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState("");
+  const [mensaje, setMensaje] = useState("");
   const [nombre, setNombre] = useState("");
   const [precio, setPrecio] = useState("");
   const [stock, setStock] = useState("");
@@ -18,9 +17,7 @@ export default function Home() {
   const cargarProductos = useCallback(async () => {
     setError("");
     try {
-      const respuesta = await fetch(`${API_URL}/api/productos`);
-      if (!respuesta.ok) throw new Error(`La API respondió ${respuesta.status}.`);
-      setProductos(await respuesta.json());
+      setProductos(await requestApi<Producto[]>("/api/productos"));
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo conectar con el backend.");
     } finally {
@@ -30,19 +27,29 @@ export default function Home() {
 
   useEffect(() => { void cargarProductos(); }, [cargarProductos]);
 
+  function agregarAlCarrito(productoId: number) {
+    const cart: CartLine[] = readCart();
+    const existing = cart.find((line) => line.productoId === productoId);
+    if (existing) existing.cantidad += 1;
+    else cart.push({ productoId, cantidad: 1 });
+    saveCart(cart);
+    setMensaje("Añadido al carrito.");
+    window.setTimeout(() => setMensaje(""), 2200);
+  }
+
   async function crearProducto(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setGuardando(true);
     setError("");
+    setMensaje("");
     try {
-      const respuesta = await fetch(`${API_URL}/api/productos`, {
+      await requestApi<Producto>("/api/productos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nombre: nombre.trim(), precio: Number(precio), stock: Number(stock) }),
       });
-      const datos = await respuesta.json().catch(() => ({}));
-      if (!respuesta.ok) throw new Error(datos.error || `La API respondió ${respuesta.status}.`);
       setNombre(""); setPrecio(""); setStock("");
+      setMensaje("Producto guardado en el backend.");
       await cargarProductos();
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo crear el producto.");
@@ -53,16 +60,21 @@ export default function Home() {
 
   return (
     <main className="app-shell">
-      <header className="topbar"><a className="brand" href="#inicio"><span className="brand-icon">P</span><span>Productos UPB</span></a><span className="connection"><i /> API conectada</span></header>
-      <section className="intro" id="inicio"><p className="eyebrow">BACKEND + FIREBASE</p><h1>Inventario de productos</h1><p>Los datos se consultan y guardan en la API de productos desplegada en Render.</p></section>
-      <section className="content-grid">
-        <div className="panel inventory"><div className="panel-heading"><div><p className="eyebrow">CATÁLOGO</p><h2>Productos</h2></div><button className="secondary-button" onClick={() => void cargarProductos()} disabled={cargando}>Actualizar</button></div>
-          {error && <p className="notice error" role="alert">{error} Comprueba que el backend esté activo.</p>}
-          {cargando ? <p className="empty">Cargando productos…</p> : productos.length === 0 ? <p className="empty">Aún no hay productos. Puedes crear el primero.</p> : <div className="table-wrap"><table><thead><tr><th>Producto</th><th>Precio</th><th>Stock</th></tr></thead><tbody>{productos.map((p) => <tr key={p.id}><td><strong>{p.nombre}</strong><small>ID {p.id}</small></td><td>${Number(p.precio).toFixed(2)}</td><td><span className="stock">{p.stock}</span></td></tr>)}</tbody></table></div>}
-        </div>
-        <form className="panel form-panel" onSubmit={crearProducto}><p className="eyebrow">NUEVO REGISTRO</p><h2>Agregar producto</h2><label>Nombre<input required maxLength={100} value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej. Cuaderno" /></label><div className="form-row"><label>Precio<input required type="number" min="0" step="0.01" value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder="0.00" /></label><label>Stock<input required type="number" min="0" step="1" value={stock} onChange={(e) => setStock(e.target.value)} placeholder="0" /></label></div><button className="primary-button" disabled={guardando}>{guardando ? "Guardando…" : "Guardar producto"}</button><p className="form-hint">La operación se realiza con POST /api/productos.</p></form>
+      <StoreHeader />
+      <section className="hero intro">
+        <div><p className="eyebrow">TIENDA DE DEMOSTRACIÓN · API EN RENDER</p><h1>Compra lo que necesitas para tu semestre.</h1><p>Explora el catálogo, arma tu carrito y confirma una compra. El inventario y los totales se calculan en el backend.</p></div>
+        <div className="hero-card"><span className="hero-card-mark">U</span><strong>Mercado<br />Universitario</strong><small>Compra sencilla, inventario en tiempo real.</small></div>
       </section>
-      <footer>Proyecto académico · Frontend Firebase Hosting · Backend Render</footer>
+      {error && <p className="notice error" role="alert">{error} Revisa que la API esté disponible.</p>}
+      {mensaje && <p className="notice success" role="status">{mensaje}</p>}
+      <section className="shop-layout">
+        <div className="catalog-section">
+          <div className="section-heading"><div><p className="eyebrow">CATÁLOGO</p><h2>Productos disponibles</h2></div><button className="secondary-button" onClick={() => void cargarProductos()} disabled={cargando}>Actualizar</button></div>
+          {cargando ? <p className="empty">Cargando inventario…</p> : productos.length === 0 ? <p className="empty">Todavía no hay productos en el catálogo.</p> : <div className="product-grid">{productos.map((producto, index) => <article className="product-card" key={producto.id}><div className={`product-art art-${index % 4}`} aria-hidden="true"><span>{producto.nombre.slice(0, 1).toUpperCase()}</span></div><div className="product-info"><p className="product-category">PRODUCTO UPB · #{producto.id}</p><h3>{producto.nombre}</h3><div className="product-bottom"><div><strong>{formatMoney(producto.precio)}</strong><small>{producto.stock} disponibles</small></div><button className="add-button" onClick={() => agregarAlCarrito(producto.id)} disabled={producto.stock < 1} aria-label={`Añadir ${producto.nombre} al carrito`}>Añadir <span aria-hidden="true">+</span></button></div></div></article>)}</div>}
+        </div>
+        <form className="panel form-panel" onSubmit={crearProducto}><p className="eyebrow">AMPLÍA EL CATÁLOGO</p><h2>Agregar producto</h2><p className="panel-copy">El nuevo artículo se guarda en PostgreSQL y aparece en la tienda.</p><label>Nombre<input required maxLength={100} value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej. Cuaderno universitario" /></label><div className="form-row"><label>Precio (Bs)<input required type="number" min="0" step="0.01" value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder="18.50" /></label><label>Stock inicial<input required type="number" min="0" step="1" value={stock} onChange={(e) => setStock(e.target.value)} placeholder="20" /></label></div><button className="primary-button" disabled={guardando}>{guardando ? "Guardando…" : "Guardar en el catálogo"}</button><p className="form-hint">POST /api/productos</p></form>
+      </section>
+      <footer className="site-footer"><span>Mercado UPB</span><span>Catálogo · carrito · compra</span></footer>
     </main>
   );
 }
