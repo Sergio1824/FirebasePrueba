@@ -13,7 +13,7 @@ export async function requestApi<T>(path: string, options?: RequestInit): Promis
   const response = await fetch(`${API_URL}${path}`, options);
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(data?.error || `La API respondió ${response.status}.`);
+    throw new Error(data?.error || `No se pudo completar la solicitud.`);
   }
   return data as T;
 }

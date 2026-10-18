@@ -67,7 +67,7 @@ export default function CarritoPage() {
 
   return (
     <main className="app-shell"><StoreHeader />
-      <section className="page-intro"><p className="eyebrow">TU PEDIDO</p><h1>Carrito de compras</h1><p>Revisa cantidades y el total calculado por el backend antes de confirmar.</p></section>
+      <section className="page-intro"><p className="eyebrow">TU PEDIDO</p><h1>Carrito de compras</h1><p>Revisa las cantidades y el total de tu pedido antes de confirmar.</p></section>
       {error && <p className="notice error" role="alert">{error}</p>}
       {!listo ? <p className="empty">Cargando carrito…</p> : lineas.length === 0 ? <section className="panel empty-state"><span className="empty-icon" aria-hidden="true">＋</span><h2>Tu carrito está vacío</h2><p>Vuelve al catálogo y añade productos para ver el cálculo de tu pedido.</p><Link className="primary-button button-link" href="/">Ir al catálogo</Link></section> : <section className="cart-layout"><div className="panel cart-panel"><div className="section-heading"><div><p className="eyebrow">PRODUCTOS SELECCIONADOS</p><h2>{lineas.length} {lineas.length === 1 ? "artículo" : "artículos"}</h2></div><button className="text-button" onClick={() => setLineas([])}>Vaciar carrito</button></div>
         {lineas.map((linea) => {
@@ -80,7 +80,7 @@ export default function CarritoPage() {
         })}
         {calculando && <p className="calculation-note">Actualizando total…</p>}
         <Link className="back-link" href="/">← Seguir comprando</Link>
-      </div><aside className="panel summary-panel"><p className="eyebrow">RESUMEN</p><h2>Total del pedido</h2>{resumen && <><div className="summary-line"><span>Unidades</span><strong>{resumen.totalUnidades}</strong></div><div className="summary-line"><span>Subtotal</span><strong>{formatMoney(resumen.subtotal)}</strong></div><div className="summary-line total-line"><span>Total</span><strong>{formatMoney(resumen.total)}</strong></div></>}<button className="primary-button" onClick={() => void confirmarCompra()} disabled={!resumen || calculando || comprando}>{comprando ? "Confirmando…" : "Confirmar compra"}</button><p className="form-hint">POST /api/carrito/calcular · POST /api/compras</p></aside></section>}
+      </div><aside className="panel summary-panel"><p className="eyebrow">RESUMEN</p><h2>Total del pedido</h2>{resumen && <><div className="summary-line"><span>Unidades</span><strong>{resumen.totalUnidades}</strong></div><div className="summary-line"><span>Subtotal</span><strong>{formatMoney(resumen.subtotal)}</strong></div><div className="summary-line total-line"><span>Total</span><strong>{formatMoney(resumen.total)}</strong></div></>}<button className="primary-button" onClick={() => void confirmarCompra()} disabled={!resumen || calculando || comprando}>{comprando ? "Confirmando…" : "Confirmar compra"}</button></aside></section>}
       <footer className="site-footer"><span>Mercado UPB</span><span>Pago de demostración · sin cobro</span></footer>
     </main>
   );

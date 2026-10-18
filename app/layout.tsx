@@ -7,7 +7,7 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
   title: "Mercado UPB | Tienda universitaria",
-  description: "Catálogo, carrito y compras conectadas a una API en Render.",
+  description: "Tienda universitaria con catalogo, carrito y compras.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
